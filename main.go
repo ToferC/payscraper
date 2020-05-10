@@ -71,7 +71,10 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			captionArray = strings.Split(rawCaption, " - ")
 		}
 
-		if captionArray[0] != "" && len(captionArray[0]) <= 6 && len(captionArray[0]) > 2 {
+		if captionArray[0] != "" &&
+			len(captionArray[0]) <= 6 &&
+			len(captionArray[0]) > 2 &&
+			strings.Contains(captionArray[1], "annual") {
 
 			p := PayScale{
 				Name: captionArray[0],
