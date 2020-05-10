@@ -9,22 +9,18 @@ import (
 
 func (g Group) save() {
 
-	path := "./groups/" + g.Identifier + ".json"
+	path := "./rates_of_pay_groups/" + g.Identifier + ".json"
 
 	writeFile(path, g)
 }
 
 func writeFile(path string, g Group) {
 
-	// Check if file exists
-	var _, err = os.Stat(path)
-
 	// Create new file if needed
-	if os.IsNotExist(err) {
-		var file, err = os.Create(path)
-		checkError(err)
-		defer file.Close()
-	}
+	var file, err = os.Create(path)
+	checkError(err)
+	defer file.Close()
+
 	fmt.Println("==> done creating file", path+"\n")
 
 	data, _ := json.Marshal(g)

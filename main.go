@@ -61,9 +61,17 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 
 		rawCaption := strings.TrimSpace(table.Find("caption").Text())
 
-		captionArray := strings.Split(rawCaption, " - ")
+		// different groups format their captions differently.
+		// figure out which separator they use ":" or " - " and split on that
+		captionArray := []string{}
 
-		if captionArray[0] != "" && len(captionArray[0]) <= 6 {
+		if strings.Contains(rawCaption, ":") {
+			captionArray = strings.Split(rawCaption, ":")
+		} else {
+			captionArray = strings.Split(rawCaption, " - ")
+		}
+
+		if captionArray[0] != "" && len(captionArray[0]) <= 6 && len(captionArray[0]) > 2 {
 
 			p := PayScale{
 				Name: captionArray[0],
@@ -84,14 +92,21 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 				if date != "2020-01-01" {
 					tr.Find("td").Each(func(indexOfTd int, td *goquery.Selection) {
 
-						pay := strings.Replace(td.Text(), ",", "", -1)
+						if strings.Contains(td.Text(), "to") {
+							payRange := strings.Split(td.Text(), " to ")
+							pay1, _ := strconv.Atoi(strings.TrimSpace(payRange[0]))
+							pay2, _ := strconv.Atoi(strings.TrimSpace(payRange[1]))
+							payRates[date] = append(payRates[date], pay1, pay2)
+						} else {
+							pay := strings.Replace(td.Text(), ",", "", -1)
 
-						payAsNum, err := strconv.Atoi(pay)
-						if err != nil {
-							payAsNum = 0
+							payAsNum, err := strconv.Atoi(pay)
+							if err != nil {
+								payAsNum = 0
+							}
+
+							payRates[date] = append(payRates[date], payAsNum)
 						}
-
-						payRates[date] = append(payRates[date], payAsNum)
 
 					})
 				}
