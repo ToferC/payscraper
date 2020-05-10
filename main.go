@@ -1,17 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"os"
+	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 )
 
-var groupList = []string{
+var groupURLs = []string{
 	"https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=4#rates-ec",
 	"https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=1#rates-cs",
 	"https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=10#rates-fb",
@@ -20,74 +19,90 @@ var groupList = []string{
 	"https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=15#rates-pm",
 }
 
-type PayScale struct {
+type Group struct {
 	Name       string
 	Identifier string
-	PayScale   map[string][]string
 	URL        string
+	PayScales  []PayScale
+}
+
+type PayScale struct {
+	Name     string
+	PayScale map[string][]int
 }
 
 func main() {
-	for _, group := range groupList {
 
-		g := PayScale{
-			URL: group,
+	groups := []Group{}
+
+	for _, url := range groupURLs {
+
+		g := Group{
+			Identifier: url[len(url)-2:],
+			URL:        url,
 		}
 
-		GetPayScales(group, &g)
+		GetPayScales(url, &g)
+
+		g.save()
+
+		groups = append(groups, g)
 	}
+	// fmt.Println(groups) or do something else with them
 }
 
-// StringToLines - Convert HTML table strings into text lines
-func StringToLines(s string) []string {
-	var lines []string
+func processTable(tableObject *goquery.Selection, g *Group) {
+	fmt.Println("Processing table and generating payscale")
 
-	scanner := bufio.NewScanner(strings.NewReader(s))
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
-	}
-
-	return lines
-}
-
-func processTable(tableObject *goquery.Selection) {
-	fmt.Println("Processing table")
-
-	// map of level(int) x column(string) x value(string)
-	payRates := make(map[string][]string)
+	// Generate payscale name and map[datetime][]int
+	payRates := make(map[string][]int)
 
 	tableObject.Each(func(i int, table *goquery.Selection) {
 
-		table.Find("tr").Each(func(rowIndex int, tr *goquery.Selection) {
+		rawCaption := strings.TrimSpace(table.Find("caption").Text())
 
-			date := "2020-01-01"
+		captionArray := strings.Split(rawCaption, " - ")
 
-			tr.Find("time").Each(func(indexOfTd int, th *goquery.Selection) {
-				date, _ = th.Attr("datetime")
-				payRates[date] = []string{}
+		if captionArray[0] != "" && len(captionArray[0]) <= 6 {
 
-			})
-
-			if date != "2020-01-01" {
-				tr.Find("td").Each(func(indexOfTd int, td *goquery.Selection) {
-
-					pay := strings.Replace(td.Text(), ",", "", -1)
-
-					payRates[date] = append(payRates[date], pay)
-
-				})
+			p := PayScale{
+				Name: captionArray[0],
 			}
 
-		})
+			tb := table.Find("tbody")
+
+			tb.Find("tr").Each(func(rowIndex int, tr *goquery.Selection) {
+
+				date := "2020-01-01"
+
+				tr.Find("time").Each(func(indexOfTd int, th *goquery.Selection) {
+					date, _ = th.Attr("datetime")
+					payRates[date] = []int{}
+
+				})
+
+				if date != "2020-01-01" {
+					tr.Find("td").Each(func(indexOfTd int, td *goquery.Selection) {
+
+						pay := strings.Replace(td.Text(), ",", "", -1)
+
+						payAsNum, err := strconv.Atoi(pay)
+						if err != nil {
+							payAsNum = 0
+						}
+
+						payRates[date] = append(payRates[date], payAsNum)
+
+					})
+				}
+				p.PayScale = payRates
+			})
+			g.PayScales = append(g.PayScales, p)
+		}
 	})
-	fmt.Println(payRates)
 }
 
-func GetPayScales(groupURL string, g *PayScale) map[string][]string {
+func GetPayScales(groupURL string, g *Group) map[string][]string {
 
 	// Initialize Colly Collector
 	c := colly.NewCollector(
@@ -117,11 +132,13 @@ func GetPayScales(groupURL string, g *PayScale) map[string][]string {
 
 		goquerySelection := e.DOM
 
-		goquerySelection.Find("tbody").Each(func(index int, tablehtml *goquery.Selection) {
+		g.Name = strings.TrimSpace(goquerySelection.Find("h1").Text())
+
+		goquerySelection.Find("table").Each(func(index int, tablehtml *goquery.Selection) {
 			if index == 0 {
 			} else {
 				fmt.Println("Found Pay Table", index)
-				processTable(tablehtml)
+				processTable(tablehtml, g)
 			}
 		})
 	})
@@ -132,10 +149,7 @@ func GetPayScales(groupURL string, g *PayScale) map[string][]string {
 
 	c.Visit(path)
 
-	//fmt.Println(abilities)
-
 	g.URL = groupURL
-	g.PayScale = payRates
 
 	fmt.Println(g)
 
