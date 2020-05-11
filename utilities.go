@@ -25,6 +25,7 @@ func writeFile(path string, g Group) {
 
 	data, _ := json.Marshal(g)
 	err = ioutil.WriteFile(path, data, 0644)
+	checkError(err)
 }
 
 func checkError(err error) {
