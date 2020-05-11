@@ -84,10 +84,16 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			captionArray = strings.Split(rawCaption, " - ")
 		}
 
+		// Isn't empty
 		if captionArray[0] != "" &&
-			len(captionArray[0]) <= 6 &&
+			// Is under 12 characters
+			len(captionArray[0]) <= 12 &&
+			// is at least 3 characters
 			len(captionArray[0]) > 2 &&
-			strings.Contains(strings.ToLower(captionArray[1]), "annual") {
+			// refers to annual pay
+			strings.Contains(strings.ToLower(captionArray[1]), "annual") &&
+			// contains the identifer we are looking for
+			strings.Contains(strings.ToLower(captionArray[0]), g.Identifier) {
 
 			p := PayScale{
 				Name: captionArray[0],
