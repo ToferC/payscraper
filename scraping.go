@@ -10,6 +10,51 @@ import (
 	"github.com/gocolly/colly"
 )
 
+func GetGroupURLs(url string) []string {
+
+	// Initialize Colly Collector
+	c := colly.NewCollector(
+		colly.AllowedDomains("www.tbs-sct.gc.ca"),
+	)
+
+	c.OnRequest(func(r *colly.Request) {
+		fmt.Println("Visiting", r.URL)
+	})
+
+	c.OnError(func(_ *colly.Response, err error) {
+		log.Println("Something went wrong", err)
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Println("Visited", r.Request.URL)
+	})
+
+	// set URLs for scraping
+	path := url
+
+	// set empty array for urls
+	urls := []string{}
+
+	// Test scraping function rates of pay
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+
+		link := e.Attr("href")
+		fmt.Println(link)
+
+		if strings.Contains(link, "rates") {
+			urls = append(urls, link)
+		}
+	})
+
+	c.OnScraped(func(r *colly.Response) {
+		fmt.Println("Finished", r.Request.URL)
+	})
+
+	c.Visit(path)
+
+	return urls
+}
+
 func GetPayScales(groupURL string, g *Group) {
 
 	// Initialize Colly Collector
@@ -73,11 +118,21 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 		// different groups format their captions differently.
 		// figure out which separator they use ":" or " - " and split on that
 		captionArray := []string{}
+		caption2 := ""
 
 		if strings.Contains(rawCaption, ":") {
+			// caption is split by :
 			captionArray = strings.Split(rawCaption, ":")
-		} else {
+		} else if strings.Contains(rawCaption, " - ") {
+			// caption is split by " - "
 			captionArray = strings.Split(rawCaption, " - ")
+		} else {
+			// caption isn't split
+			captionArray = append(captionArray, rawCaption)
+		}
+
+		if len(captionArray) > 1 {
+			caption2 = captionArray[1]
 		}
 
 		// Isn't empty
@@ -87,7 +142,8 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			// is at least 3 characters
 			len(captionArray[0]) > 2 &&
 			// refers to annual pay
-			strings.Contains(strings.ToLower(captionArray[1]), "annual") &&
+			(strings.Contains(strings.ToLower(caption2), "annual") ||
+				caption2 == "") &&
 			// contains the identifer we are looking for
 			strings.Contains(strings.ToLower(captionArray[0]), g.Identifier) {
 

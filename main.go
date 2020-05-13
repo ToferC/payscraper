@@ -12,7 +12,9 @@ var groupURLs = []string{
 
 func main() {
 
-	for _, url := range groupURLs {
+	urls := GetGroupURLs("https://www.tbs-sct.gc.ca/pubs_pol/hrpubs/coll_agre/rates-taux-eng.asp")
+
+	for _, url := range urls {
 
 		g := Group{
 			Identifier: url[len(url)-2:],
