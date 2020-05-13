@@ -23,7 +23,8 @@ func writeFile(path string, g Group) {
 
 	fmt.Println("==> done creating file", path+"\n")
 
-	data, _ := json.Marshal(g)
+	data, err := json.Marshal(g)
+	checkError(err)
 	err = ioutil.WriteFile(path, data, 0644)
 	checkError(err)
 }

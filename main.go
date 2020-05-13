@@ -12,8 +12,6 @@ var groupURLs = []string{
 
 func main() {
 
-	groups := []Group{}
-
 	for _, url := range groupURLs {
 
 		g := Group{
@@ -22,10 +20,6 @@ func main() {
 		}
 
 		GetPayScales(url, &g)
-
-		g.save()
-
-		groups = append(groups, g)
 	}
 	// fmt.Println(groups) or do something else with them
 }

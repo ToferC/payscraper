@@ -10,7 +10,7 @@ import (
 	"github.com/gocolly/colly"
 )
 
-func GetPayScales(groupURL string, g *Group) map[string][]string {
+func GetPayScales(groupURL string, g *Group) {
 
 	// Initialize Colly Collector
 	c := colly.NewCollector(
@@ -33,14 +33,13 @@ func GetPayScales(groupURL string, g *Group) map[string][]string {
 
 	path := groupURL
 
-	payRates := make(map[string][]string)
-
 	// Test scraping function rates of pay
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 
 		goquerySelection := e.DOM
 
 		g.Name = strings.TrimSpace(goquerySelection.Find("h1").Text())
+		g.PayScales = []PayScale{}
 
 		goquerySelection.Find("table").Each(func(index int, tablehtml *goquery.Selection) {
 			if index == 0 {
@@ -59,16 +58,13 @@ func GetPayScales(groupURL string, g *Group) map[string][]string {
 
 	g.URL = groupURL
 
-	fmt.Println(g)
+	g.save()
 
-	return payRates
+	fmt.Println(g)
 }
 
 func processTable(tableObject *goquery.Selection, g *Group) {
 	fmt.Println("Processing table and generating payscale")
-
-	// Generate payscale name and map[datetime][]int
-	payRates := make(map[string][]int)
 
 	tableObject.Each(func(i int, table *goquery.Selection) {
 
@@ -103,22 +99,24 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 
 			tb.Find("tr").Each(func(rowIndex int, tr *goquery.Selection) {
 
+				pR := PayRow{}
+
 				date := "2020-01-01"
 
 				tr.Find("time").Each(func(indexOfTd int, th *goquery.Selection) {
 					date, _ = th.Attr("datetime")
-					payRates[date] = []int{}
-
+					pR.DateTime = date
 				})
 
 				if date != "2020-01-01" {
+
 					tr.Find("td").Each(func(indexOfTd int, td *goquery.Selection) {
 
 						if strings.Contains(td.Text(), "to") {
 							payRange := strings.Split(td.Text(), " to ")
 							pay1, _ := strconv.Atoi(strings.TrimSpace(payRange[0]))
 							pay2, _ := strconv.Atoi(strings.TrimSpace(payRange[1]))
-							payRates[date] = append(payRates[date], pay1, pay2)
+							pR.Salary = append(pR.Salary, pay1, pay2)
 						} else {
 							pay := strings.Replace(td.Text(), ",", "", -1)
 
@@ -127,13 +125,15 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 								payAsNum = 0
 							}
 
-							payRates[date] = append(payRates[date], payAsNum)
+							pR.Salary = append(pR.Salary, payAsNum)
 						}
 
 					})
 				}
-				p.PayScale = payRates
-				p.Steps = len(payRates[date])
+				if len(pR.Salary) > 0 {
+					p.PayRows = append(p.PayRows, pR)
+				}
+				p.Steps = len(pR.Salary)
 			})
 			g.PayScales = append(g.PayScales, p)
 		}
