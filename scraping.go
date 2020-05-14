@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
@@ -155,16 +156,17 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 
 			tb.Find("tr").Each(func(rowIndex int, tr *goquery.Selection) {
 
-				pR := PayRow{}
+				inc := Increment{}
 
-				date := "2020-01-01"
+				date := "1980-01-01T11:45:26.371Z"
 
 				tr.Find("time").Each(func(indexOfTd int, th *goquery.Selection) {
-					date, _ = th.Attr("datetime")
-					pR.DateTime = date
+					dateString, _ := th.Attr("datetime")
+					date = dateString + "T11:45:26.371Z"
+					inc.DateTime = dateString
 				})
 
-				if date != "2020-01-01" {
+				if date != "1980-01-01T11:45:26.371Z" {
 
 					tr.Find("td").Each(func(indexOfTd int, td *goquery.Selection) {
 
@@ -172,7 +174,7 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 							payRange := strings.Split(td.Text(), " to ")
 							pay1, _ := strconv.Atoi(strings.TrimSpace(payRange[0]))
 							pay2, _ := strconv.Atoi(strings.TrimSpace(payRange[1]))
-							pR.Salary = append(pR.Salary, pay1, pay2)
+							inc.Salary = append(inc.Salary, pay1, pay2)
 						} else {
 							pay := strings.Replace(td.Text(), ",", "", -1)
 
@@ -181,15 +183,23 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 								payAsNum = 0
 							}
 
-							pR.Salary = append(pR.Salary, payAsNum)
+							inc.Salary = append(inc.Salary, payAsNum)
 						}
 
 					})
 				}
-				if len(pR.Salary) > 0 {
-					p.PayRows = append(p.PayRows, pR)
+				if len(inc.Salary) > 0 {
+					p.Increments = append(p.Increments, inc)
 				}
-				p.Steps = len(pR.Salary)
+				p.Steps = len(inc.Salary)
+
+				// match current increment here
+				inForce, _ := time.Parse(time.RFC3339, date)
+				if afterTimeSpan(inForce, time.Now()) {
+					// today is after the in_force date for the pay agreement increments
+					// should return false if inForce is in the future
+					p.CurrentPayScale = inc.Salary
+				}
 			})
 			g.PayScales = append(g.PayScales, p)
 		}

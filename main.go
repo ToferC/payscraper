@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 var groupURLs = []string{
 	"https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=4#rates-ec",
 	"https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=1#rates-cs",
@@ -16,12 +18,14 @@ func main() {
 
 	for _, url := range urls {
 
+		today := time.Now().String()
+
 		g := Group{
-			Identifier: url[len(url)-2:],
-			URL:        url,
+			Identifier:  url[len(url)-2:],
+			URL:         url,
+			ScrapedDate: today,
 		}
 
 		GetPayScales(url, &g)
 	}
-	// fmt.Println(groups) or do something else with them
 }

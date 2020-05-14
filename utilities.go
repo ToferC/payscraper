@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
 func (g Group) save() {
@@ -34,4 +35,8 @@ func checkError(err error) {
 		fmt.Println(err.Error())
 		os.Exit(0)
 	}
+}
+
+func afterTimeSpan(inForce, check time.Time) bool {
+	return check.After(inForce)
 }
