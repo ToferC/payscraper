@@ -155,18 +155,19 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			// Find each table row
 			tb.Find("tr").Each(func(rowIndex int, tr *goquery.Selection) {
 
-				inc := Increment{}
+				// initialize row for salary
+				row := []int{}
 
 				date := "1980-01-01T11:45:26.371Z"
+				dateString := ""
 
 				// find the datetime value for the row
 				tr.Find("time").Each(func(indexOfTd int, th *goquery.Selection) {
-					dateString, _ := th.Attr("datetime")
+					dateString, _ = th.Attr("datetime")
 					date = dateString + "T11:45:26.371Z"
-					inc.DateTime = dateString
 				})
 
-				// Check if data is valid
+				// Check if data is valid and, if so, scan rows
 				if date != "1980-01-01T11:45:26.371Z" {
 
 					// find each salary cell
@@ -176,7 +177,7 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 							payRange := strings.Split(td.Text(), " to ")
 							pay1, _ := strconv.Atoi(strings.TrimSpace(payRange[0]))
 							pay2, _ := strconv.Atoi(strings.TrimSpace(payRange[1]))
-							inc.Salary = append(inc.Salary, pay1, pay2)
+							row = append(row, pay1, pay2)
 						} else {
 							pay := strings.Replace(td.Text(), ",", "", -1)
 
@@ -185,15 +186,21 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 								payAsNum = 0
 							}
 
-							inc.Salary = append(inc.Salary, payAsNum)
+							row = append(row, payAsNum)
 						}
 
 					})
+					// if row totals zero or has no steps, disregard
 				}
 
 				// Check that there are non 0 values here
-				if len(inc.Salary) > 0 &&
-					sum(inc.Salary) > 0 {
+				if len(row) > 0 &&
+					sum(row) > 0 {
+
+					inc := Increment{
+						DateTime: dateString,
+						Salary:   row,
+					}
 
 					p.Increments = append(p.Increments, inc)
 					p.Steps = len(inc.Salary)
@@ -205,16 +212,11 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 						// should return false if inForce is in the future
 						p.CurrentPayScale = inc.Salary
 					}
-				} else {
-					// remove payscale as something is wrong
-					p.Name = "ERROR"
 				}
 
 			})
 			// table row iterator complete, add payscale to group payscales
-			if p.Name != "ERROR" {
-				g.PayScales = append(g.PayScales, p)
-			}
+			g.PayScales = append(g.PayScales, p)
 		}
 	})
 }
