@@ -142,7 +142,9 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			(strings.Contains(strings.ToLower(caption2), "annual") ||
 				caption2 == "") &&
 			// contains the identifer we are looking for
-			strings.Contains(strings.ToLower(captionArray[0]), g.Identifier) {
+			strings.Contains(strings.ToLower(captionArray[0]), g.Identifier) &&
+			// not already duplicated in Payscales
+			!g.existsInPayScaleNames(captionArray[0]) {
 
 			// Create PayScale struct
 			p := PayScale{
