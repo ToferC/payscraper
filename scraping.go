@@ -103,10 +103,6 @@ func GetPayScales(groupURL string, g *Group) {
 	c.Visit(path)
 
 	g.URL = groupURL
-
-	g.save()
-
-	fmt.Println(g)
 }
 
 func processTable(tableObject *goquery.Selection, g *Group) {
@@ -148,26 +144,32 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			// contains the identifer we are looking for
 			strings.Contains(strings.ToLower(captionArray[0]), g.Identifier) {
 
+			// Create PayScale struct
 			p := PayScale{
 				Name: captionArray[0],
 			}
 
+			// Find table body
 			tb := table.Find("tbody")
 
+			// Find each table row
 			tb.Find("tr").Each(func(rowIndex int, tr *goquery.Selection) {
 
 				inc := Increment{}
 
 				date := "1980-01-01T11:45:26.371Z"
 
+				// find the datetime value for the row
 				tr.Find("time").Each(func(indexOfTd int, th *goquery.Selection) {
 					dateString, _ := th.Attr("datetime")
 					date = dateString + "T11:45:26.371Z"
 					inc.DateTime = dateString
 				})
 
+				// Check if data is valid
 				if date != "1980-01-01T11:45:26.371Z" {
 
+					// find each salary cell
 					tr.Find("td").Each(func(indexOfTd int, td *goquery.Selection) {
 
 						if strings.Contains(td.Text(), "to") {
@@ -188,20 +190,31 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 
 					})
 				}
-				if len(inc.Salary) > 0 {
-					p.Increments = append(p.Increments, inc)
-				}
-				p.Steps = len(inc.Salary)
 
-				// match current increment here
-				inForce, _ := time.Parse(time.RFC3339, date)
-				if afterTimeSpan(inForce, time.Now()) {
-					// today is after the in_force date for the pay agreement increments
-					// should return false if inForce is in the future
-					p.CurrentPayScale = inc.Salary
+				// Check that there are non 0 values here
+				if len(inc.Salary) > 0 &&
+					sum(inc.Salary) > 0 {
+
+					p.Increments = append(p.Increments, inc)
+					p.Steps = len(inc.Salary)
+
+					// match current increment here
+					inForce, _ := time.Parse(time.RFC3339, date)
+					if afterTimeSpan(inForce, time.Now()) {
+						// today is after the in_force date for the pay agreement increments
+						// should return false if inForce is in the future
+						p.CurrentPayScale = inc.Salary
+					}
+				} else {
+					// remove payscale as something is wrong
+					p.Name = "ERROR"
 				}
+
 			})
-			g.PayScales = append(g.PayScales, p)
+			// table row iterator complete, add payscale to group payscales
+			if p.Name != "ERROR" {
+				g.PayScales = append(g.PayScales, p)
+			}
 		}
 	})
 }

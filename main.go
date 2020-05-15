@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 var groupURLs = []string{
 	"https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=4#rates-ec",
@@ -16,16 +19,51 @@ func main() {
 
 	urls := GetGroupURLs("https://www.tbs-sct.gc.ca/pubs_pol/hrpubs/coll_agre/rates-taux-eng.asp")
 
+	groups := []Group{}
+	errorGroups := []Group{}
+
 	for _, url := range urls {
 
-		today := time.Now().String()
+		if strings.Contains(url, "https://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?") {
 
-		g := Group{
-			Identifier:  url[len(url)-2:],
-			URL:         url,
-			ScrapedDate: today,
+			today := time.Now().String()
+
+			g := Group{
+				Identifier:      url[len(url)-2:],
+				URL:             url,
+				ScrapedDate:     today,
+				IrregularFormat: false,
+			}
+
+			GetPayScales(url, &g)
+
+			if g.PayScales == nil {
+				// something is wrong
+				g.IrregularFormat = true
+			}
+
+			if g.PayScales != nil {
+				if len(g.PayScales) == 0 {
+					g.IrregularFormat = true
+				} else {
+					if g.PayScales[0].Steps == 0 ||
+						sum(g.PayScales[0].CurrentPayScale) == 0 {
+						g.IrregularFormat = true
+					}
+				}
+			}
+
+			if g.IrregularFormat == true {
+				errorGroups = append(errorGroups, g)
+				g.save()
+			} else {
+				// should be okay
+				groups = append(groups, g)
+				g.save()
+			}
 		}
-
-		GetPayScales(url, &g)
 	}
+
+	saveGroupData(groups, "groups_data.json")
+	saveGroupData(errorGroups, "error_groups_data.json")
 }

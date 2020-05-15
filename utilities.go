@@ -10,9 +10,32 @@ import (
 
 func (g Group) save() {
 
-	path := "./rates_of_pay_groups/" + g.Identifier + ".json"
+	irregString := ""
+
+	if g.IrregularFormat == true {
+		irregString = "irr_"
+	}
+
+	path := "./rates_of_pay_groups/" + irregString + g.Identifier + ".json"
 
 	writeFile(path, g)
+}
+
+func saveGroupData(groups []Group, filename string) {
+	path := fmt.Sprintf("./rates_of_pay_groups/%s", filename)
+
+	// Create new file if needed
+	var file, err = os.Create(path)
+	checkError(err)
+	defer file.Close()
+
+	fmt.Println("==> done creating file", path+"\n")
+
+	data, err := json.Marshal(groups)
+	checkError(err)
+	err = ioutil.WriteFile(path, data, 0644)
+	checkError(err)
+
 }
 
 func writeFile(path string, g Group) {
@@ -39,4 +62,14 @@ func checkError(err error) {
 
 func afterTimeSpan(inForce, check time.Time) bool {
 	return check.After(inForce)
+}
+
+func sum(slice []int) int {
+	total := 0
+
+	for i := 0; i < len(slice); i++ {
+		total += slice[i]
+	}
+
+	return total
 }

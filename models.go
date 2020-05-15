@@ -1,11 +1,12 @@
 package main
 
 type Group struct {
-	Name        string     `json:"name"`
-	Identifier  string     `json:"identifier"`
-	URL         string     `json:"url"`
-	PayScales   []PayScale `json:"pay_scales"`
-	ScrapedDate string     `json:"date_scraped"`
+	Name            string     `json:"name"`
+	Identifier      string     `json:"identifier"`
+	URL             string     `json:"url"`
+	PayScales       []PayScale `json:"pay_scales"`
+	ScrapedDate     string     `json:"date_scraped"`
+	IrregularFormat bool       `json:"irregular_format"`
 }
 
 type PayScale struct {
