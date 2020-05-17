@@ -5,12 +5,12 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly"
 )
 
+// GetGroupURLs scrapes the main TBS collective agreements page and returns specific agreement URLs.
 func GetGroupURLs(url string) []string {
 
 	// Initialize Colly Collector
@@ -56,6 +56,7 @@ func GetGroupURLs(url string) []string {
 	return urls
 }
 
+// GetPayScales parses a specific TBS Website looking for pay tables.
 func GetPayScales(groupURL string, g *Group) {
 
 	// Initialize Colly Collector
@@ -132,6 +133,16 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			caption2 = captionArray[1]
 		}
 
+		// extract level from name
+		level := 0
+
+		levelString := strings.Split(captionArray[0], "-")
+		if len(levelString) > 1 {
+			level, _ = strconv.Atoi(levelString[1])
+		} else {
+			level = 0
+		}
+
 		// Isn't empty
 		if captionArray[0] != "" &&
 			// Is under 12 characters
@@ -142,13 +153,16 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 			(strings.Contains(strings.ToLower(caption2), "annual") ||
 				caption2 == "") &&
 			// contains the identifer we are looking for
-			strings.Contains(strings.ToLower(captionArray[0]), g.Identifier) &&
+			strings.Contains(strings.ToUpper(captionArray[0]), g.Identifier) &&
 			// not already duplicated in Payscales
-			!g.existsInPayScaleNames(captionArray[0]) {
+			!g.existsInPayScaleNames(captionArray[0]) &&
+			// able to extract numerical level from caption
+			level != 0 {
 
 			// Create PayScale struct
 			p := PayScale{
-				Name: captionArray[0],
+				Name:  captionArray[0],
+				Level: level,
 			}
 
 			// Find table body
@@ -199,21 +213,13 @@ func processTable(tableObject *goquery.Selection, g *Group) {
 				if len(row) > 0 &&
 					sum(row) > 0 {
 
-					inc := Increment{
+					inc := RateOfPay{
 						DateTime: dateString,
 						Salary:   row,
 					}
 
-					p.Increments = append(p.Increments, inc)
+					p.RatesOfPay = append(p.RatesOfPay, inc)
 					p.Steps = len(inc.Salary)
-
-					// match current increment here
-					inForce, _ := time.Parse(time.RFC3339, date)
-					if afterTimeSpan(inForce, time.Now()) {
-						// today is after the in_force date for the pay agreement increments
-						// should return false if inForce is in the future
-						p.CurrentPayScale = inc.Salary
-					}
 				}
 
 			})

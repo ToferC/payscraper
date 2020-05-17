@@ -29,7 +29,7 @@ func main() {
 			today := time.Now().String()
 
 			g := Group{
-				Identifier:      url[len(url)-2:],
+				Identifier:      strings.ToUpper(url[len(url)-2:]),
 				URL:             url,
 				ScrapedDate:     today,
 				IrregularFormat: false,
@@ -46,8 +46,7 @@ func main() {
 				if len(g.PayScales) == 0 {
 					g.IrregularFormat = true
 				} else {
-					if g.PayScales[0].Steps == 0 ||
-						sum(g.PayScales[0].CurrentPayScale) == 0 {
+					if g.PayScales[0].Steps == 0 {
 						g.IrregularFormat = true
 					}
 				}
