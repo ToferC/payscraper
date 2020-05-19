@@ -5,6 +5,8 @@ The Web scraper that crawls the [TBS Rates of pay for public service employees p
 
 You can find the scraped data in the /rates_of_pay_groups folder.
 
+This data is then used to power the gc-payscales API, available here: [https://gc-payscales.herokuapp.com/playground](https://gc-payscales.herokuapp.com/playground)
+
 ### Sample
 ![Rates of Pay sample scrape](https://github.com/ToferC/payscraper/raw/master/payscraper.png)
 
